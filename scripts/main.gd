@@ -6,13 +6,13 @@ const CANDY_TYPES := 6
 const BOARD_OFFSET := Vector2(384, 104)  # Center 512x512 in 1280x720
 const MARGIN := 4.0
 
-const CANDY_COLORS := [
-	Color(0.95, 0.2, 0.2),   # Red
-	Color(0.2, 0.5, 0.95),   # Blue
-	Color(0.2, 0.85, 0.3),   # Green
-	Color(0.95, 0.85, 0.15), # Yellow
-	Color(0.7, 0.25, 0.9),   # Purple
-	Color(0.95, 0.55, 0.1),  # Orange
+const CANDY_TEXTURES: Array[Texture2D] = [
+	preload("res://assets/sprites/candy_0.png"),
+	preload("res://assets/sprites/candy_1.png"),
+	preload("res://assets/sprites/candy_2.png"),
+	preload("res://assets/sprites/candy_3.png"),
+	preload("res://assets/sprites/candy_4.png"),
+	preload("res://assets/sprites/candy_5.png"),
 ]
 
 var grid: Array = []
@@ -111,10 +111,10 @@ func _draw_board() -> void:
 func _create_candy_node(x: int, y: int) -> void:
 	if grid[x][y] < 0:
 		return
-	var candy := ColorRect.new()
-	candy.size = Vector2(CELL_SIZE - MARGIN * 2, CELL_SIZE - MARGIN * 2)
+	var candy := Sprite2D.new()
+	candy.texture = CANDY_TEXTURES[grid[x][y]]
+	candy.centered = false
 	candy.position = _grid_to_pixel(Vector2i(x, y)) + Vector2(MARGIN, MARGIN)
-	candy.color = CANDY_COLORS[grid[x][y]]
 	add_child(candy)
 	candy_nodes[x][y] = candy
 
@@ -173,7 +173,7 @@ func _is_adjacent(a: Vector2i, b: Vector2i) -> bool:
 
 
 func _highlight(cell: Vector2i, on: bool) -> void:
-	var node: ColorRect = candy_nodes[cell.x][cell.y]
+	var node: Sprite2D = candy_nodes[cell.x][cell.y]
 	if node:
 		node.modulate = Color(1.4, 1.4, 1.4) if on else Color.WHITE
 
@@ -203,14 +203,14 @@ func _swap_data(a: Vector2i, b: Vector2i) -> void:
 	grid[a.x][a.y] = grid[b.x][b.y]
 	grid[b.x][b.y] = tmp
 
-	var tmp_node: ColorRect = candy_nodes[a.x][a.y]
+	var tmp_node: Sprite2D = candy_nodes[a.x][a.y]
 	candy_nodes[a.x][a.y] = candy_nodes[b.x][b.y]
 	candy_nodes[b.x][b.y] = tmp_node
 
 
 func _animate_swap(a: Vector2i, b: Vector2i) -> void:
-	var node_a: ColorRect = candy_nodes[a.x][a.y]
-	var node_b: ColorRect = candy_nodes[b.x][b.y]
+	var node_a: Sprite2D = candy_nodes[a.x][a.y]
+	var node_b: Sprite2D = candy_nodes[b.x][b.y]
 	var pos_a := _grid_to_pixel(a) + Vector2(MARGIN, MARGIN)
 	var pos_b := _grid_to_pixel(b) + Vector2(MARGIN, MARGIN)
 
@@ -267,7 +267,7 @@ func _process_matches(matches: Array[Vector2i], is_cascade: bool = false) -> voi
 
 	# Remove matched candies
 	for cell in matches:
-		var node: ColorRect = candy_nodes[cell.x][cell.y]
+		var node: Sprite2D = candy_nodes[cell.x][cell.y]
 		if node:
 			node.queue_free()
 			candy_nodes[cell.x][cell.y] = null
@@ -332,7 +332,7 @@ func _refill() -> void:
 			if grid[x][y] < 0:
 				grid[x][y] = randi() % CANDY_TYPES
 				_create_candy_node(x, y)
-				var node: ColorRect = candy_nodes[x][y]
+				var node: Sprite2D = candy_nodes[x][y]
 				var target: Vector2 = node.position
 				# Start above board, staggered by position
 				node.position.y = BOARD_OFFSET.y - (empty_count - drop_index) * CELL_SIZE
