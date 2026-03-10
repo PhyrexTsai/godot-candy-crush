@@ -22,11 +22,34 @@ var is_animating := false
 var score := 0
 var score_label: Label
 
+var sfx_swap: AudioStreamPlayer
+var sfx_match: AudioStreamPlayer
+var sfx_no_match: AudioStreamPlayer
+var sfx_cascade: AudioStreamPlayer
+var sfx_refill: AudioStreamPlayer
+
 
 func _ready() -> void:
+	_init_sfx()
 	_init_grid()
 	_draw_board()
 	_create_score_label()
+
+
+func _init_sfx() -> void:
+	sfx_swap = _make_sfx_player("res://assets/sfx/swap.ogg")
+	sfx_match = _make_sfx_player("res://assets/sfx/match.ogg")
+	sfx_no_match = _make_sfx_player("res://assets/sfx/no_match.ogg")
+	sfx_cascade = _make_sfx_player("res://assets/sfx/cascade.ogg")
+	sfx_refill = _make_sfx_player("res://assets/sfx/refill.ogg")
+
+
+func _make_sfx_player(path: String) -> AudioStreamPlayer:
+	var player := AudioStreamPlayer.new()
+	player.stream = load(path)
+	player.bus = &"Master"
+	add_child(player)
+	return player
 
 
 func _init_grid() -> void:
@@ -159,16 +182,18 @@ func _try_swap(a: Vector2i, b: Vector2i) -> void:
 	is_animating = true
 	selected = Vector2i(-1, -1)
 
+	sfx_swap.play()
 	_swap_data(a, b)
 	await _animate_swap(a, b)
 
 	var matches := _find_matches()
 	if matches.is_empty():
 		# No match — swap back
+		sfx_no_match.play()
 		_swap_data(a, b)
 		await _animate_swap(a, b)
 	else:
-		await _process_matches(matches)
+		await _process_matches(matches, false)
 
 	is_animating = false
 
@@ -234,7 +259,12 @@ func _find_matches() -> Array[Vector2i]:
 	return result
 
 
-func _process_matches(matches: Array[Vector2i]) -> void:
+func _process_matches(matches: Array[Vector2i], is_cascade: bool = false) -> void:
+	if is_cascade:
+		sfx_cascade.play()
+	else:
+		sfx_match.play()
+
 	# Remove matched candies
 	for cell in matches:
 		var node: ColorRect = candy_nodes[cell.x][cell.y]
@@ -253,11 +283,12 @@ func _process_matches(matches: Array[Vector2i]) -> void:
 
 	# Refill empty cells
 	await _refill()
+	sfx_refill.play()
 
 	# Chain reaction
 	var new_matches := _find_matches()
 	if not new_matches.is_empty():
-		await _process_matches(new_matches)
+		await _process_matches(new_matches, true)
 
 
 func _apply_gravity() -> void:
